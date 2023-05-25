@@ -1,0 +1,77 @@
+# see https://github.com/compose-spec/compose-spec/blob/master/spec.md
+# see https://github.com/opencontainers/image-spec/blob/master/annotations.md
+services:
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - 8025:8025
+    networks:
+      default:
+        aliases:
+          - mail.test
+  wso2is:
+    build:
+      context: wso2is
+    ports:
+      - 9443:9443
+    restart: on-failure
+    volumes:
+      - ./wso2is/deployment.toml:/wso2is/repository/conf/deployment.toml:ro
+      - wso2is-database:/wso2is/repository/database
+    depends_on:
+      - mailhog
+    networks:
+      default:
+        aliases:
+          - wso2is.test
+  init:
+    depends_on:
+      - mailhog
+      - wso2is
+    build:
+      context: init
+    volumes:
+      - .:/host
+  destroy:
+    profiles:
+      - destroy
+    build:
+      context: init
+    volumes:
+      - .:/host
+    entrypoint: terraform
+    command:
+      - destroy
+      - -auto-approve
+  example-go-confidential:
+    profiles:
+      - client
+    restart: on-failure
+    build:
+      context: clients/example-go-confidential
+    ports:
+      - 8081:8081
+    environment:
+      - EXAMPLE_URL=http://example-go-confidential.test:8081
+      - EXAMPLE_WSO2IS_MY_ACCOUNT_URL=https://wso2is.test:9443/myaccount
+      - EXAMPLE_OIDC_ISSUER_URL=https://wso2is.test:9443/oauth2/token
+      - EXAMPLE_OIDC_CLIENT_CONFIG_PATH=/host/tmp/example-go-confidential.json
+    command:
+      - -tls-insecure-skip-verify
+    volumes:
+      - .:/host:ro
+    networks:
+      default:
+        aliases:
+          - example-go-confidential.test
+  example-go-confidential-test:
+    profiles:
+      - test
+    build:
+      context: clients/example-go-confidential-test
+    environment:
+      - EXAMPLE_LOGIN_URL=http://example-go-confidential.test:8081/auth/login
+      - EXAMPLE_USERNAME=admin
+      - EXAMPLE_PASSWORD=admin
+volumes:
+  wso2is-database:
