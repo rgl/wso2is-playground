@@ -292,8 +292,156 @@ def init_main(args):
     p = Path(__file__).resolve().parent / '..' / 'tmp' / f'{application["name"]}.json'
     with open(p, 'w') as f:
         json.dump(application, f, indent=2)
+    
+    # TODO federate the example-go-confidential-keycloak-saml-federation application with keycloak by automating the following procedure.
+    #      see WSO2 API Manager & Keycloak SAML SSO at https://athiththan11.medium.com/wso2-api-manager-keycloak-saml-sso-164dea896bbf
+    #
+    #       at https://wso2is.test:9443/console
+    #           click Identity Providers
+    #           click + New Identity Provider
+    #           click Standard-Based IdP
+    #           set:
+    #               Identity provider name:                 Keycloak
+    #               Select protocol:                        SAML
+    #               Service provider entity ID:             urn:wso2is.test
+    #               Mode of configuration:                  Manual Configuration
+    #               Identity provider Single Sign-On URL:   http://keycloak.test:8080/realms/example/protocol/saml
+    #               Identity provider entity ID:            http://keycloak.test:8080/realms/example
+    #               Identity provider certificate:          -----BEGIN CERTIFICATE-----
+    #                                                       <open http://keycloak.test:8080/realms/example/protocol/saml/descriptor>
+    #                                                       <find the KeyDescriptor use="signing" element>
+    #                                                       <paste the X509Certificate element inner text here>
+    #                                                       -----END CERTIFICATE-----
+    #       at https://wso2is.test:9443/console:
+    #           click Identity Providers
+    #           click Keycloak
+    #           click the Attributes tab
+    #           click + Add IdP Attributes
+    #           add the following attributes:
+    #               # TODO maybe configure keycloak to send these claims already in the wso2.org name uri?
+    #               * External IdP Attribute:   username
+    #                 Maps to:                  http://wso2.org/claims/username
+    #               * External IdP Attribute:   Role
+    #                 Maps to:                  http://wso2.org/claims/roles
+    #               * External IdP Attribute:   email
+    #                 Maps to:                  http://wso2.org/claims/emailaddress
+    #               * External IdP Attribute:   emailverified
+    #                 Maps to:                  http://wso2.org/claims/identity/emailVerified
+    #               * External IdP Attribute:   firstname
+    #                 Maps to:                  http://wso2.org/claims/givenname
+    #               * External IdP Attribute:   lastname
+    #                 Maps to:                  http://wso2.org/claims/lastname
+    #           set:
+    #                 Subject Attribute:    username
+    #                 Role Attribute:       Role
+    #       at https://wso2is.test:9443/console:
+    #           click Applications
+    #           click example-go-confidential-keycloak-saml-federation
+    #           click the Sign-in Method tab
+    #           click Start with default configuration
+    #           remove the existing Username & Password authentication method
+    #           click + Add Authentication
+    #           click Keycloak
+    #           click Update
+    #       in a private browser session:
+    #           at http://example-go-confidential-keycloak-saml-federation.test:8082
+    #           login as alice:alice
+    # create the example-go-confidential-keycloak-saml-federation application and
+    # save its details at ../tmp/example-go-confidential-keycloak-saml-federation.json.
+    application = create_application(
+        args.base_url,
+        {
+            "templateId": "b9c5e11e-fc78-484b-9bec-015d247561b8",
+            "name": "example-go-confidential-keycloak-saml-federation",
+            "inboundProtocolConfiguration": {
+                "oidc": {
+                    "state": "ACTIVE",
+                    "grantTypes": [
+                        "authorization_code",
+                    ],
+                    "accessToken": {
+                        "type": "Default",
+                        "userAccessTokenExpiryInSeconds": 3600,
+                        "applicationAccessTokenExpiryInSeconds": 3600,
+                        "bindingType": "sso-session",
+                        "revokeTokensWhenIDPSessionTerminated": False,
+                        "validateTokenBinding": False,
+                    },
+                    "pkce": {
+                        "mandatory": True,
+                        "supportPlainTransformAlgorithm": False
+                    },
+                    "publicClient": False,
+                    "validateRequestObjectSignature": False,
+                    "callbackURLs": [
+                        "http://example-go-confidential-keycloak-saml-federation.test:8082/auth/oidc/callback"
+                    ],
+                    "allowedOrigins": [],
+                }
+            },
+            "authenticationSequence": {
+                "type": "DEFAULT"
+            },
+            "advancedConfigurations": {
+                "discoverableByEndUsers": False,
+                "skipLoginConsent": True
+            },
+            "claimConfiguration": {
+                "dialect": "LOCAL",
+                "subject": {
+                    "claim": {
+                        "uri": "http://wso2.org/claims/username"
+                    },
+                    "includeTenantDomain": False,
+                    "includeUserDomain": False,
+                    "useMappedLocalSubject": False
+                },
+                "role": {
+                    "claim": {
+                        "uri": "http://wso2.org/claims/roles"
+                    },
+                    "includeUserDomain": True
+                },
+                "requestedClaims": [
+                    {
+                        "claim": {
+                            "uri": "http://wso2.org/claims/username"
+                        },
+                        "mandatory": True
+                    },
+                    {
+                        "claim": {
+                            "uri": "http://wso2.org/claims/emailaddress"
+                        },
+                        "mandatory": True
+                    },
+                    {
+                        "claim": {
+                            "uri": "http://wso2.org/claims/identity/emailVerified"
+                        },
+                        "mandatory": True
+                    },
+                    {
+                        "claim": {
+                            "uri": "http://wso2.org/claims/givenname"
+                        },
+                        "mandatory": True
+                    },
+                    {
+                        "claim": {
+                            "uri": "http://wso2.org/claims/lastname"
+                        },
+                        "mandatory": True
+                    },
+                ],
+            }
+        })
+    p = Path(__file__).resolve().parent / '..' / 'tmp' / f'{application["name"]}.json'
+    with open(p, 'w') as f:
+        json.dump(application, f, indent=2)
 
 
 def try_main(args):
     dump_current_user(args.base_url)
     dump_application(args.base_url, 'example-go-confidential')
+    dump_application(args.base_url, 'example-go-confidential-keycloak-saml-federation')

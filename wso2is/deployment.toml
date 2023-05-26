@@ -68,6 +68,6 @@ app_password= "dashboard"
 # SMTP email sender settings.
 # see https://is.docs.wso2.com/en/6.1.0/deploy/configure-email-sending/
 [output_adapter.email]
-from_address = "wso2is@example.com"
+from_address = "wso2is@wso2is.test"
 hostname = "mailhog"
 port = 1025
